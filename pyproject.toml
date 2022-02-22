@@ -1,0 +1,28 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.isort]
+profile = "black"
+
+[tool.poetry]
+name = "notion2pg"
+version = "0.1.0"
+description = "Import Notion databases to PostgreSQL tables"
+authors = ["Aymeric Augustin <aymeric.augustin@fractalideas.com>"]
+license = "BSD-3-Clause"
+readme = "README.rst"
+repository = "https://github.com/aaugustin/notion2pg"
+keywords = ["notion", "postgresql"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+psycopg = "*"
+httpx = "*"
+
+[tool.poetry.dev-dependencies]
