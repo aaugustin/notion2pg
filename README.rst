@@ -1,6 +1,27 @@
 notion2pg - Import Notion databases to PostgreSQL tables
 ========================================================
 
+When a system built with Notion_ databases reaches a sufficient scale, the need
+for business intelligence arises. This requires extracting data from Notion and
+loading it into a relational database.
+
+The original author didn't find a convenient, off-the-shelf solution for this.
+Services offering synchronization from Notion to a relational database rely on
+clunky automations and involve manual configuration.
+
+Thus notion2pg was born.
+
+It does exactly one thing: convert any Notion database to a PostgreSQL table.
+It requires zero configuration. You made changes in Notion? No worries, just
+re-run notion2pg to refresh the table definition and its content.
+
+.. _Notion: https://www.notion.so/
+.. _PostgreSQL: https://www.postgresql.org/
+
+While notion2pg is currently alpha software, it imported successfully complex
+databases with dozens of columns and thousands of rows. There's a fair chance
+that it will handle any human-sized Notion database.
+
 Quick start
 -----------
 
@@ -9,6 +30,7 @@ Quick start
    .. _Create a Notion integration: https://www.notion.so/my-integrations
 
 2. Share a Notion database with your integration, as well as related databases.
+
 3. Create a PostgreSQL database e.g.:
 
    .. code-block:: shell-session
@@ -59,14 +81,6 @@ previous versions around.
 FAQ
 ---
 
-**Why does this project exist?**
-
-There's a wide range of services offering synchronization from Notion to
-PostgreSQL. However, they're based on clunky automation services requiring
-configuration in a UI.
-
-It was faster to write this script than to figure out how to use one of them.
-
 **Why is my relation or rollup field empty?**
 
 Your integration must have access not only to the table that you're importing,
@@ -81,6 +95,8 @@ Limitations
   related table and join it in your queries instead.
 * Properties of type "people" are imported as the person ID, which is probably
   not the most useful representation.
+* Every import is a full copy. Given that Notion's API isn't particularly fast,
+  the practical limit is around 10,000 rows.
 
 Changelog
 ---------
