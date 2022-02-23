@@ -83,6 +83,7 @@ DELAY = 1  # before HTTP requests when reading databases, for throttling
 RETRIES = 10  # retry queries up to RETRIES times
 BACKOFF = 2  # multiply DELAY by BACKOFF between retries
 PAGE_SIZE = 64  # lower than the default of 100 to prevent timeouts
+TIMEOUT = 120  # seconds :-( Notion's API isn't all that fast
 
 
 def get_database(database_id, token):
@@ -133,7 +134,7 @@ def iter_database(database_id, token):
                         "Notion-Version": "2021-08-16",
                     },
                     json=query,
-                    timeout=60,
+                    timeout=TIMEOUT,
                 ).json()
             except httpx.RequestError as exc:
                 logging.warning(
