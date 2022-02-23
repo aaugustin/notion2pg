@@ -75,6 +75,8 @@ but also to every table involved in a relation or a rollup.
 Limitations
 -----------
 
+* The order of columns in the table isn't preserved. This information isn't
+  available in the API of Notion.
 * Support for rollups is partial.
 * Properties of type "people" are imported as the person ID, which is probably
   not the most useful representation.
