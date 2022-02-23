@@ -77,7 +77,8 @@ Limitations
 
 * The order of columns in the table isn't preserved. This information isn't
   available in the API of Notion.
-* Support for rollups is partial.
+* Rollups "Show original" and "Show unique values" are ignored. Import the
+  related table and join it in your queries instead.
 * Properties of type "people" are imported as the person ID, which is probably
   not the most useful representation.
 

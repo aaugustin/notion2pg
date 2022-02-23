@@ -1,5 +1,49 @@
 #!/usr/bin/env python
 
+# Notes on formulas
+# -----------------
+#
+# There are four output types of formulas:
+#
+# 1. string
+# 2. number
+# 3. date — never a date range, unlike date properties
+# 4. boolean
+
+# Notes on rollups
+# ----------------
+#
+# There are four signatures of rollup functions:
+#
+# 1. any -> array[any]
+#    * show_original
+#    * show_unique
+# 2. any -> number
+#    * count / count_all
+#    * count_values
+#    * unique / count_unique_values
+#    * empty / count_empty
+#    * not_empty / count_not_empty
+#    * percent_empty
+#    * percent_not_empty
+# 3. number -> number
+#    * sum
+#    * average
+#    * median
+#    * min
+#    * max
+#    * range
+# 4. date -> date
+#    * earliest_date
+#    * latest_date
+#    * date_range
+#
+# Rollups returning arrays aren't implemented. Tables containing such rollups
+# can stil be imported but these rollups will be ignored.
+#
+# Some functions have different names in the API / documentation. This is
+# probably a documentation bug. We use the name that we get from the API.
+
 import argparse
 import datetime
 import json
@@ -220,9 +264,18 @@ def get_value(property):
     elif type_ == "rollup":
         rollup = property["rollup"]
         subtype = rollup["type"]
-        if subtype == "number":
+        if subtype == "array":
+            # Skip rollups returning arrays
+            return ("array", [])
+        elif subtype == "number":
             # Optional[Number]
             return ("number", rollup["number"])
+        elif subtype == "date":
+            # Tuple[Optional[str], Optional[str]] - start and end date or datetime
+            if rollup["date"] is None:
+                return ("date", (None, None))
+            assert rollup["date"]["time_zone"] is None
+            return ("date", (rollup["date"]["start"], rollup["date"]["end"]))
         raise NotImplementedError(f"unsupported rollup: {json.dumps(rollup)}")
 
     elif type_ == "created_time":
@@ -339,11 +392,13 @@ def convert(property, values):
     elif type_ == "rollup":
         (subtype,) = set(value[0] for value in values)
         values = list(value[1] for value in values)
-        if subtype == "number":
-            if all(isinstance(value, int) for value in values if value is not None):
-                return "integer", values
-            else:
-                return "double precision", values
+        if subtype == "array":
+            # Skip rollups returning arrays
+            return None, values
+        elif subtype == "number":
+            return convert({"type": "number"}, values)
+        elif subtype == "date":
+            return convert({"type": "date"}, values)
         rollup = property["rollup"]
         raise NotImplementedError(f"unsupported rollup: {json.dumps(rollup)}")
 
@@ -454,6 +509,9 @@ def sync_database(database_id, table_name, drop_existing=False, versioned=False)
         assert name == property["name"]  # Notion duplicates this info
         values = [get_value(page["properties"][name]) for page in pages]
         field_type, column = convert(property, values)
+        if field_type is None:
+            logging.info('Skipping unsupported property "%s"', name)
+            continue
         logging.info('Converted property "%s" to %s', name, field_type)
         field_names.append(sanitize_name(name))
         field_types.append(field_type)
