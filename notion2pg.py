@@ -245,13 +245,14 @@ def get_value(property):
         elif subtype == "number":
             # Optional[Number]
             return ("number", formula["number"])
-        if subtype == "date":
-            # Optional[str] - start date or datetime
+        elif subtype == "date":
+            # Tuple[Optional[str], NoneType] - start date or datetime
             if formula["date"] is None:
-                return ("date", None)
+                return ("date", (None, None))
             assert formula["date"]["time_zone"] is None
             assert formula["date"]["end"] is None
-            return ("date", formula["date"]["start"])
+            # Return the same format for consistency, even if end date is never set.
+            return ("date", (formula["date"]["start"], None))
         elif subtype == "boolean":
             # bool
             return ("boolean", formula["boolean"])
@@ -369,15 +370,9 @@ def convert(property, values):
         if subtype == "string":
             return "text", values
         elif subtype == "number":
-            if all(isinstance(value, int) for value in values if value is not None):
-                return "integer", values
-            else:
-                return "double precision", values
+            return convert({"type": "number"}, values)
         elif subtype == "date":
-            if all(DATE_RE.fullmatch(value) for value in values if value is not None):
-                return "date", values
-            else:
-                return "timestamp with time zone", values
+            return convert({"type": "date"}, values)
         elif subtype == "boolean":
             return "boolean", values
         formula = property["formula"]
