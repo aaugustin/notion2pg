@@ -22,7 +22,11 @@ DATE_RE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 
 INVALID_IN_NAME_RE = re.compile("[^a-z0-9_]")
 
+# Maximum total delay for a single call is 2047 seconds which should let Notion
+# recover from most temporary issues.
 DELAY = 1  # before HTTP requests when reading databases, for throttling
+RETRIES = 10  # retry queries up to RETRIES times
+BACKOFF = 2  # multiply DELAY by BACKOFF between retries
 
 PAGE_SIZE = 64  # lower than the default of 100 to prevent timeouts
 
@@ -38,7 +42,11 @@ def get_database(database_id, token):
         },
     ).json()
     t1 = time.perf_counter()
-    logging.info("Fetched Notion database %s in %.1f seconds", database_id, t1 - t0)
+    logging.info(
+        "Fetched Notion database %s in %.1f seconds",
+        database_id,
+        t1 - t0,
+    )
     return database
 
 
@@ -50,26 +58,55 @@ def iter_database(database_id, token):
         "page_size": PAGE_SIZE,
     }
     while has_more:
-        time.sleep(DELAY)
         t0 = time.perf_counter()
-        data = httpx.post(
-            f"https://api.notion.com/v1/databases/{database_id}/query",
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Notion-Version": "2021-08-16",
-            },
-            json=query,
-            timeout=120,
-        ).json()
+        delay = DELAY
+        for retry in range(RETRIES):
+            try:
+                time.sleep(delay)
+                data = httpx.post(
+                    f"https://api.notion.com/v1/databases/{database_id}/query",
+                    headers={
+                        "Authorization": f"Bearer {token}",
+                        "Notion-Version": "2021-08-16",
+                    },
+                    json=query,
+                    timeout=60,
+                ).json()
+            except httpx.RequestError as exc:
+                logging.warning(
+                    "Failed to fetch the next pages: HTTP request error: %s",
+                    exc,
+                )
+                if retry == RETRIES - 1:
+                    raise
+                else:
+                    delay *= BACKOFF
+                    continue
+
+            if data["object"] == "error":
+                logging.error(
+                    "Failed to fetch the next pages: Notion API error: HTTP %s: %s",
+                    data["status"],
+                    data["message"],
+                )
+                if retry == RETRIES - 1:
+                    raise RuntimeError(f"HTTP {data['status']}: {data['message']}")
+                else:
+                    delay *= BACKOFF
+                    continue
+
+            break
         t1 = time.perf_counter()
-        if data["object"] == "error":
-            raise Exception(f"HTTP {data['status']}: {data['message']}")
+
         assert data["object"] == "list"
         logging.info(
-            "Fetched %d Notion pages in %.1f seconds", len(data["results"]), t1 - t0
+            "Fetched %d Notion pages in %.1f seconds",
+            len(data["results"]),
+            t1 - t0,
         )
         has_more = data["has_more"]
         query["start_cursor"] = data["next_cursor"]
+
         yield from data["results"]
 
 
