@@ -26,3 +26,6 @@ psycopg = "*"
 httpx = "*"
 
 [tool.poetry.dev-dependencies]
+
+[tool.poetry.scripts]
+notion2pg = 'notion2pg:main'
