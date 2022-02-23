@@ -136,9 +136,21 @@ def iter_database(database_id, token):
                     json=query,
                     timeout=TIMEOUT,
                 ).json()
+
             except httpx.RequestError as exc:
                 logging.warning(
                     "Failed to fetch the next pages: HTTP request error: %s",
+                    exc,
+                )
+                if retry == RETRIES - 1:
+                    raise
+                else:
+                    delay *= BACKOFF
+                    continue
+
+            except json.JSONDecodeError as exc:
+                logging.warning(
+                    "Failed to parse response: JSON decode error: %s",
                     exc,
                 )
                 if retry == RETRIES - 1:
