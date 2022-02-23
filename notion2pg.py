@@ -34,7 +34,7 @@ PAGE_SIZE = 64  # lower than the default of 100 to prevent timeouts
 def get_database(database_id, token):
     """Get properties of a Notion database."""
     t0 = time.perf_counter()
-    database = httpx.get(
+    data = httpx.get(
         f"https://api.notion.com/v1/databases/{database_id}",
         headers={
             "Authorization": f"Bearer {token}",
@@ -42,12 +42,21 @@ def get_database(database_id, token):
         },
     ).json()
     t1 = time.perf_counter()
+
+    if data["object"] == "error":
+        logging.error(
+            "Failed to fetch the next pages: Notion API error: HTTP %s: %s",
+            data["status"],
+            data["message"],
+        )
+        raise RuntimeError(f"HTTP {data['status']}: {data['message']}")
+
     logging.info(
         "Fetched Notion database %s in %.1f seconds",
         database_id,
         t1 - t0,
     )
-    return database
+    return data
 
 
 def iter_database(database_id, token):
