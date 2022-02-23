@@ -283,13 +283,13 @@ def get_value(property):
         return property["created_time"]
 
     elif type_ == "created_by":
-        return property["created_by"]["name"]
+        return property["created_by"]["id"]
 
     elif type_ == "last_edited_time":
         return property["last_edited_time"]
 
     elif type_ == "last_edited_by":
-        return property["last_edited_by"]["name"]
+        return property["last_edited_by"]["id"]
 
     raise NotImplementedError(f"unsupported property: {json.dumps(property)}")
 
@@ -401,13 +401,13 @@ def convert(property, values):
         return "timestamp with time zone", values
 
     elif type_ == "created_by":
-        return "text", values
+        return "uuid", values
 
     elif type_ == "last_edited_time":
         return "timestamp with time zone", values
 
     elif type_ == "last_edited_by":
-        return "text", values
+        return "uuid", values
 
     raise NotImplementedError(f"unsupported property: {json.dumps(property)}")
 
