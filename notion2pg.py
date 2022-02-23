@@ -149,6 +149,12 @@ def get_value(property):
     elif type_ == "formula":
         formula = property["formula"]
         subtype = formula["type"]
+        if subtype == "string":
+            # str
+            return ("string", formula["string"])
+        elif subtype == "number":
+            # Optional[Number]
+            return ("number", formula["number"])
         if subtype == "date":
             # Optional[str] - start date or datetime
             if formula["date"] is None:
@@ -156,12 +162,9 @@ def get_value(property):
             assert formula["date"]["time_zone"] is None
             assert formula["date"]["end"] is None
             return ("date", formula["date"]["start"])
-        elif subtype == "number":
-            # Optional[Number]
-            return ("number", formula["number"])
-        elif subtype == "string":
-            # str
-            return ("string", formula["string"])
+        elif subtype == "boolean":
+            # bool
+            return ("boolean", formula["boolean"])
         raise NotImplementedError(f"unsupported formula: {json.dumps(formula)}")
 
     elif type_ == "relation":
@@ -264,18 +267,20 @@ def convert(property, values):
     elif type_ == "formula":
         (subtype,) = set(value[0] for value in values)
         values = list(value[1] for value in values)
-        if subtype == "date":
-            if all(DATE_RE.fullmatch(value) for value in values if value is not None):
-                return "date", values
-            else:
-                return "timestamp with time zone", values
+        if subtype == "string":
+            return "text", values
         elif subtype == "number":
             if all(isinstance(value, int) for value in values if value is not None):
                 return "integer", values
             else:
                 return "double precision", values
-        elif subtype == "string":
-            return "text", values
+        elif subtype == "date":
+            if all(DATE_RE.fullmatch(value) for value in values if value is not None):
+                return "date", values
+            else:
+                return "timestamp with time zone", values
+        elif subtype == "boolean":
+            return "boolean", values
         formula = property["formula"]
         raise NotImplementedError(f"unsupported formula: {json.dumps(formula)}")
 
