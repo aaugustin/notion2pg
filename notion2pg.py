@@ -64,6 +64,17 @@ logging.basicConfig(
 
 DATE_RE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 
+
+def maybe_date(value):
+    """Fix date values when Notion returns them as datetimes."""
+    if value is None:
+        return None
+    # Switch to str.removesuffix when dropping Python 3.8.
+    if value.endswith("T00:00:00.000+00:00"):
+        return value[:-19]
+    return value
+
+
 INVALID_IN_NAME_RE = re.compile("[^a-z0-9_]")
 
 # Maximum total delay for a single call is 2047 seconds which should let Notion
@@ -71,7 +82,6 @@ INVALID_IN_NAME_RE = re.compile("[^a-z0-9_]")
 DELAY = 1  # before HTTP requests when reading databases, for throttling
 RETRIES = 10  # retry queries up to RETRIES times
 BACKOFF = 2  # multiply DELAY by BACKOFF between retries
-
 PAGE_SIZE = 64  # lower than the default of 100 to prevent timeouts
 
 
@@ -252,7 +262,8 @@ def get_value(property):
             assert formula["date"]["time_zone"] is None
             assert formula["date"]["end"] is None
             # Return the same format for consistency, even if end date is never set.
-            return ("date", (formula["date"]["start"], None))
+            start_date = maybe_date(formula["date"]["start"])
+            return ("date", (start_date, None))
         elif subtype == "boolean":
             # bool
             return ("boolean", formula["boolean"])
@@ -276,7 +287,9 @@ def get_value(property):
             if rollup["date"] is None:
                 return ("date", (None, None))
             assert rollup["date"]["time_zone"] is None
-            return ("date", (rollup["date"]["start"], rollup["date"]["end"]))
+            start_date = maybe_date(rollup["date"]["start"])
+            end_date = maybe_date(rollup["date"]["end"])
+            return ("date", (start_date, end_date))
         raise NotImplementedError(f"unsupported rollup: {json.dumps(rollup)}")
 
     elif type_ == "created_time":
