@@ -211,6 +211,9 @@ def get_value(property):
             return None
         return property["select"]["name"]
 
+    elif type_ == "status":
+        return property["status"]["name"]
+
     elif type_ == "multi_select":
         # List[str]
         return [ms["name"] for ms in property["multi_select"]]
@@ -342,6 +345,9 @@ def convert(property, values):
     elif type_ == "select":
         return "text", values
 
+    elif type_ == "status":
+        return "text", values
+    
     elif type_ == "multi_select":
         return "text[]", values
 
